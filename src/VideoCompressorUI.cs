@@ -61,8 +61,8 @@ namespace VideoToolsUI {
     public static class RemoteBackendManager {
         public const string CurrentVersion = "1.0.0";
         // Remote config URL hosted on GitHub raw:
-        public static string ConfigUrl = "https://raw.githubusercontent.com/anilM/video-compressor-pro/main/app-config.json";
-        public static string LatestUpdateUrl = "https://github.com/anilM/video-compressor-pro";
+        public static string ConfigUrl = "https://raw.githubusercontent.com/syedriyazuddin-work/video-compressor-pro/main/app-config.json";
+        public static string LatestUpdateUrl = "https://github.com/syedriyazuddin-work/video-compressor-pro";
 
         public static async Task<RemoteConfig> FetchConfigAsync() {
             try {
