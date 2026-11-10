@@ -15,7 +15,7 @@ if not exist "%CSC%" (
     exit /b 1
 )
 
-"%CSC%" /target:winexe /optimize+ /platform:anycpu /out:"%~dp0VideoCompressorUI.exe" /lib:"%WPFLIB%" /r:System.dll,System.Core.dll,System.Data.dll,System.Xml.dll,System.Xaml.dll,WindowsBase.dll,PresentationCore.dll,PresentationFramework.dll "%~dp0src\VideoCompressorUI.cs"
+"%CSC%" /target:winexe /optimize+ /platform:anycpu /out:"%~dp0VideoCompressorUI.exe" /lib:"%WPFLIB%" /r:System.dll,System.Core.dll,System.Data.dll,System.Xml.dll,System.Xaml.dll,WindowsBase.dll,PresentationCore.dll,PresentationFramework.dll,System.Security.dll "%~dp0src\VideoCompressorUI.cs"
 
 if %errorlevel% equ 0 (
     echo [OK] Successfully built VideoCompressorUI.exe!
