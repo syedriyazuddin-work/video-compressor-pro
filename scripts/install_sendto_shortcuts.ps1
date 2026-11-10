@@ -59,7 +59,7 @@ if ($Uninstall) {
 Write-Host "Registering Right-Click menu for compatible video files only..." -ForegroundColor Cyan
 
 $menuLabel = "Video Compressor Pro"
-$iconLoc = "shell32.dll,137"
+$iconLoc = "$appExe,0"
 $commandString = "`"$appExe`" `"%1`""
 
 foreach ($ext in $videoExtensions) {

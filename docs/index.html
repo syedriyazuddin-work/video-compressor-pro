@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Compressor &amp; Converter Pro — 100% Offline Video Optimizer for Windows</title>
+  <meta name="description" content="A lightning-fast, zero-dependency, 100% offline desktop video compressor and converter for Windows. Compress GBs into MBs for Discord, WhatsApp, and Slack in seconds.">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0B0F19;
+      --card-bg: #131B2E;
+      --card-border: #1E293B;
+      --card-hover-border: #6366F1;
+      --primary: #6366F1;
+      --primary-hover: #4F46E5;
+      --cyan: #38BDF8;
+      --emerald: #10B981;
+      --text: #F8FAFC;
+      --text-muted: #94A3B8;
+      --text-dim: #64748B;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    /* Background glow decorations */
+    .glow-blob-1 {
+      position: absolute;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 700px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.18) 0%, rgba(56, 189, 248, 0.08) 40%, rgba(11, 15, 25, 0) 70%);
+      filter: blur(80px);
+      z-index: 0;
+      pointer-events: none;
+    }
+    .glow-blob-2 {
+      position: absolute;
+      top: 900px;
+      right: 5%;
+      width: 500px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, rgba(11, 15, 25, 0) 70%);
+      filter: blur(80px);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Navbar */
+    nav {
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      position: relative;
+      z-index: 10;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+    }
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #1E1B4B, #0B0F19);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+    }
+    .brand-icon img {
+      width: 26px;
+      height: 26px;
+    }
+    .pro-badge {
+      background: #4F46E5;
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    .nav-links a:hover {
+      color: var(--text);
+    }
+    .nav-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+    .nav-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 80px 0 60px;
+      text-align: center;
+    }
+    .pill-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #A5B4FC;
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: 3.5rem;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+      background: linear-gradient(180deg, #FFFFFF 20%, #94A3B8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero h1 span {
+      background: linear-gradient(90deg, #38BDF8, #818CF8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: 1.22rem;
+      color: var(--text-muted);
+      max-width: 680px;
+      margin: 0 auto 36px;
+      line-height: 1.55;
+    }
+    .cta-group {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4F46E5, #6366F1);
+      color: #fff;
+      font-size: 1.05rem;
+      font-weight: 700;
+      padding: 15px 32px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 30px -5px rgba(99, 102, 241, 0.65);
+    }
+    .btn-secondary {
+      background: #131B2E;
+      border: 1px solid #334155;
+      color: var(--text);
+      font-size: 1.05rem;
+      font-weight: 600;
+      padding: 15px 28px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.2s ease;
+    }
+    .btn-secondary:hover {
+      background: #1E293B;
+      border-color: #475569;
+    }
+    .cta-caption {
+      font-size: 0.84rem;
+      color: var(--text-dim);
+    }
+
+    /* Mockup Showcase Card */
+    .mockup-wrapper {
+      margin: 50px auto 0;
+      max-width: 900px;
+      background: #131B2E;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      overflow: hidden;
+      text-align: left;
+    }
+    .mockup-titlebar {
+      height: 42px;
+      background: #0F172A;
+      border-bottom: 1px solid #1E293B;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .window-dots {
+      display: flex;
+      gap: 7px;
+    }
+    .window-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: #334155;
+    }
+    .mockup-body {
+      padding: 24px;
+    }
+    .mockup-dropzone {
+      background: #0F172A;
+      border: 2px dashed #334155;
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .mockup-controls {
+      background: #0B0F19;
+      border: 1px solid #1E293B;
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+    .mockup-slider-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .mockup-slider-track {
+      height: 8px;
+      background: #1E293B;
+      border-radius: 999px;
+      position: relative;
+      margin-bottom: 14px;
+    }
+    .mockup-slider-fill {
+      width: 25%;
+      height: 100%;
+      background: #6366F1;
+      border-radius: 999px;
+    }
+    .mockup-presets {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .mockup-preset-tag {
+      background: #1E293B;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      color: #CBD5E1;
+      font-weight: 500;
+    }
+    .mockup-preset-tag.active {
+      background: #4F46E5;
+      color: #fff;
+    }
+    .mockup-result {
+      background: #064E3B;
+      border: 1px solid #059669;
+      border-radius: 10px;
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #A7F3D0;
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+
+    /* Preset Grid */
+    .section-title {
+      text-align: center;
+      margin: 100px 0 50px;
+    }
+    .section-title h2 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+    }
+    .section-title p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+    }
+    .preset-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 24px;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .preset-card:hover {
+      border-color: var(--card-hover-border);
+      transform: translateY(-3px);
+    }
+    .preset-icon {
+      font-size: 1.8rem;
+      margin-bottom: 14px;
+    }
+    .preset-size {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+    .preset-label {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--cyan);
+      margin-bottom: 8px;
+    }
+    .preset-desc {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Features Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      margin-top: 40px;
+    }
+    .feature-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 28px;
+    }
+    .feature-icon-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      margin-bottom: 18px;
+    }
+    .feature-card h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .feature-card p {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* Steps */
+    .steps-wrapper {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      margin-top: 40px;
+    }
+    .step-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 28px;
+      position: relative;
+    }
+    .step-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #818CF8;
+      background: rgba(99, 102, 241, 0.15);
+      padding: 4px 10px;
+      border-radius: 6px;
+      display: inline-block;
+      margin-bottom: 16px;
+    }
+    .step-box h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .step-box p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    /* CTA Bottom Banner */
+    .bottom-cta {
+      margin: 120px 0 80px;
+      background: linear-gradient(135deg, rgba(30, 27, 75, 0.8), rgba(19, 27, 46, 0.9));
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 20px;
+      padding: 60px 40px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .bottom-cta h2 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      margin-bottom: 14px;
+      letter-spacing: -0.02em;
+    }
+    .bottom-cta p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 580px;
+      margin: 0 auto 30px;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 40px 0 60px;
+      text-align: center;
+      font-size: 0.88rem;
+      color: var(--text-dim);
+    }
+    footer a {
+      color: var(--text-muted);
+      text-decoration: underline;
+    }
+    footer a:hover {
+      color: #fff;
+    }
+
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2.4rem; }
+      .nav-links { display: none; }
+      .bottom-cta { padding: 40px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="glow-blob-1"></div>
+  <div class="glow-blob-2"></div>
+
+  <div class="container">
+    <!-- Navbar -->
+    <nav>
+      <div class="brand">
+        <div class="brand-icon">
+          <img src="logo.png" alt="Video Compressor Pro Logo">
+        </div>
+        <span>Video Compressor</span>
+        <span class="pro-badge">PRO</span>
+      </div>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#presets">Presets</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="https://github.com/syedriyazuddin-work/video-compressor-pro" target="_blank" class="nav-btn">
+          <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+          </svg>
+          GitHub
+        </a>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="pill-badge">
+        <span>⚡</span> Native Multi-Threaded Video Optimizer for Windows
+      </div>
+      <h1>Compress GBs into MBs.<br><span>100% Offline &amp; Private.</span></h1>
+      <p>The ultra-fast desktop video compressor built for Discord, WhatsApp, Slack, and email limits. No cloud uploads. No quality destruction. Zero subscription fees.</p>
+
+      <div class="cta-group">
+        <a href="https://github.com/syedriyazuddin-work/video-compressor-pro/releases/download/v1.0.0/Install-VideoTools.bat" class="btn-primary">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          Download Installer (.bat)
+        </a>
+        <a href="https://github.com/syedriyazuddin-work/video-compressor-pro" target="_blank" class="btn-secondary">
+          ⭐ Star on GitHub
+        </a>
+      </div>
+      <div class="cta-caption">
+        Free &amp; Open Source • Only ~54 KB • Windows 10 &amp; 11 • Portable
+      </div>
+
+      <!-- Mockup Showcase -->
+      <div class="mockup-wrapper">
+        <div class="mockup-titlebar">
+          <div class="window-dots">
+            <div class="window-dot"></div>
+            <div class="window-dot"></div>
+            <div class="window-dot"></div>
+          </div>
+          <span>Video Compressor &amp; Converter Pro</span>
+          <span style="color: #34D399;">● Engine Ready</span>
+        </div>
+        <div class="mockup-body">
+          <div class="mockup-dropzone">
+            <div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: #fff;">gameplay_recording_4k.mp4</div>
+              <div style="font-size: 0.8rem; color: #94A3B8; margin-top: 4px;">📦 128.4 MB &bull; ⏱ 01:45 &bull; 📐 3840x2160</div>
+            </div>
+            <div style="background: #334155; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">Change Video</div>
+          </div>
+
+          <div class="mockup-controls">
+            <div class="mockup-slider-header">
+              <span style="color: #94A3B8;">Target File Size:</span>
+              <span style="color: #60A5FA;">25.0 MB (Email / Slack Limit)</span>
+            </div>
+            <div class="mockup-slider-track">
+              <div class="mockup-slider-fill"></div>
+            </div>
+            <div class="mockup-presets">
+              <span class="mockup-preset-tag">8 MB (Discord)</span>
+              <span class="mockup-preset-tag">10 MB (Nitro)</span>
+              <span class="mockup-preset-tag active">25 MB (Email/Slack)</span>
+              <span class="mockup-preset-tag">50 MB</span>
+              <span class="mockup-preset-tag">100 MB</span>
+            </div>
+          </div>
+
+          <div class="mockup-result">
+            <span>🎉 Process Complete! Saved 104.3 MB (81% reduction)</span>
+            <span style="background: #10B981; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.78rem;">▶ Play Video</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Target Presets Grid -->
+    <section id="presets">
+      <div class="section-title">
+        <h2>Designed for File Upload Limits</h2>
+        <p>Never get hit with an "Upload size exceeded" error again.</p>
+      </div>
+
+      <div class="preset-grid">
+        <div class="preset-card">
+          <div class="preset-icon">🎮</div>
+          <div class="preset-size">8 MB &amp; 10 MB</div>
+          <div class="preset-label">Discord Free Tier</div>
+          <div class="preset-desc">Fit 1080p game clips and screen captures into Discord’s standard limit without paying for Nitro.</div>
+        </div>
+
+        <div class="preset-card">
+          <div class="preset-icon">💬</div>
+          <div class="preset-size">16 MB</div>
+          <div class="preset-label">WhatsApp Direct Share</div>
+          <div class="preset-desc">Send crystal clear videos on WhatsApp without letting WhatsApp's internal compressor ruin your quality.</div>
+        </div>
+
+        <div class="preset-card">
+          <div class="preset-icon">💼</div>
+          <div class="preset-size">25 MB</div>
+          <div class="preset-label">Gmail &amp; Slack Attachments</div>
+          <div class="preset-desc">Stay right under the strict 25 MB email attachment cap for Gmail, Outlook, and Microsoft Teams.</div>
+        </div>
+
+        <div class="preset-card">
+          <div class="preset-icon">📦</div>
+          <div class="preset-size">50–70% Off</div>
+          <div class="preset-label">HEVC / H.265 Archival</div>
+          <div class="preset-desc">Squeeze hundreds of gigabytes of phone or camera recordings into compact archival video storage.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features">
+      <div class="section-title">
+        <h2>Why Video Compressor Pro?</h2>
+        <p>Engineered for maximum speed, strict privacy, and effortless desktop use.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon-badge">🔒</div>
+          <h3>100% Local &amp; Private</h3>
+          <p>Your videos never leave your computer. No cloud processing, no telemetry, and zero third-party servers. Completely offline.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-badge">⚡</div>
+          <h3>Turbo Multi-Threaded Engine</h3>
+          <p>Powered by modern FFmpeg with multi-core CPU optimization and single-pass dynamic bitrate calculation for 2x to 3x faster encoding.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-badge">🖱️</div>
+          <h3>Smart Right-Click Context Menu</h3>
+          <p>Right-click any video file in Windows Explorer ➔ click Video Compressor Pro. Zero clutter on non-video files (ZIP, PDF, images remain clean).</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-badge">🎞️</div>
+          <h3>Universal Codec Support</h3>
+          <p>Convert and encode to Universal H.264 (plays anywhere), High-Efficiency HEVC (H.265), Next-Gen AV1, or rip studio MP3 audio.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-badge">📦</div>
+          <h3>Zero Runtime Dependencies</h3>
+          <p>No Python, Node.js, or complex frameworks required. Compiles and runs directly on Windows' built-in .NET Framework.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-badge">🔄</div>
+          <h3>Silent Background Sync</h3>
+          <p>Check for optional updates silently in the background with zero annoying registration prompts or license keys.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section id="how-it-works">
+      <div class="section-title">
+        <h2>Get Started in 30 Seconds</h2>
+        <p>No complicated installation steps or account signups.</p>
+      </div>
+
+      <div class="steps-wrapper">
+        <div class="step-box">
+          <span class="step-num">STEP 01</span>
+          <h3>Download &amp; Run</h3>
+          <p>Download <code>Install-VideoTools.bat</code> and double-click it. It automatically sets up your desktop shortcut in 2 seconds.</p>
+        </div>
+
+        <div class="step-box">
+          <span class="step-num">STEP 02</span>
+          <h3>Drop Any Video</h3>
+          <p>Drag and drop your video file into the modern desktop window, or right-click any video file in Windows Explorer.</p>
+        </div>
+
+        <div class="step-box">
+          <span class="step-num">STEP 03</span>
+          <h3>Pick Target &amp; Compress</h3>
+          <p>Choose your target size (8MB, 25MB, etc.) and hit Compress. Watch live progress and save up to 80% of storage.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom CTA Banner -->
+    <div class="bottom-cta">
+      <h2>Ready to optimize your videos?</h2>
+      <p>Download the free, self-contained Windows desktop application and start compressing in seconds.</p>
+      <div class="cta-group">
+        <a href="https://github.com/syedriyazuddin-work/video-compressor-pro/releases/download/v1.0.0/Install-VideoTools.bat" class="btn-primary">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          Download for Windows (.bat)
+        </a>
+        <a href="https://github.com/syedriyazuddin-work/video-compressor-pro" target="_blank" class="btn-secondary">
+          View on GitHub
+        </a>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <p>&copy; 2026 Video Compressor Pro &bull; Developed by <a href="https://github.com/syedriyazuddin-work" target="_blank">Syed Riyazuddin</a> &bull; Released under the <a href="https://opensource.org/licenses/MIT" target="_blank">MIT License</a></p>
+    </footer>
+  </div>
+
+</body>
+</html>

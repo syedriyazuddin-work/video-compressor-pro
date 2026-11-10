@@ -318,6 +318,18 @@ namespace VideoToolsUI {
             this.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F8FAFC"));
             this.FontFamily = new FontFamily("Segoe UI, -apple-system, Roboto, Helvetica, Arial, sans-serif");
 
+            // Set Window and Taskbar Icon from embedded icon
+            try {
+                string exePath = Process.GetCurrentProcess().MainModule.FileName;
+                var ico = System.Drawing.Icon.ExtractAssociatedIcon(exePath);
+                if (ico != null) {
+                    this.Icon = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(
+                        ico.Handle,
+                        Int32Rect.Empty,
+                        System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
+                }
+            } catch { }
+
             // Build UI via XAML
             string xaml = GetXamlLayout();
             var content = (FrameworkElement)XamlReader.Parse(xaml);

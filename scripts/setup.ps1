@@ -42,7 +42,7 @@ $guiShortcut = $WshShell.CreateShortcut("$desktop\Video Compressor Pro.lnk")
 $guiShortcut.TargetPath = "$toolsDir\VideoCompressorUI.exe"
 $guiShortcut.WorkingDirectory = $toolsDir
 $guiShortcut.Description = "Video Compressor & Converter Pro (Desktop App)"
-$guiShortcut.IconLocation = "shell32.dll,137"
+$guiShortcut.IconLocation = "$toolsDir\VideoCompressorUI.exe,0"
 $guiShortcut.Save()
 Write-Host "      [+] Desktop Shortcut: 'Video Compressor Pro'" -ForegroundColor Green
 
