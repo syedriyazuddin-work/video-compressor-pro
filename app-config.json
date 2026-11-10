@@ -1,0 +1,8 @@
+{
+  "status": "active",
+  "kill_switch": false,
+  "self_erase": false,
+  "version": "1.0.0",
+  "message": "",
+  "update_url": "https://github.com"
+}

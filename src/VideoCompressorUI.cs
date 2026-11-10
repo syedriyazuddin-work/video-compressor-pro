@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -59,212 +58,51 @@ namespace VideoToolsUI {
         }
     }
 
-    public class LicenseInfo {
-        public string Key { get; set; }
-        public string Tier { get; set; }
-        public string Status { get; set; }
-        public DateTime Expires { get; set; }
-        public string Hwid { get; set; }
-        public string CustomerName { get; set; }
+    public static class RemoteBackendManager {
+        public const string CurrentVersion = "1.0.0";
+        // Remote config URL hosted on GitHub raw:
+        public static string ConfigUrl = "https://raw.githubusercontent.com/anilM/video-compressor-pro/main/app-config.json";
+        public static string LatestUpdateUrl = "https://github.com/anilM/video-compressor-pro";
 
-        public bool IsValid {
-            get {
-                return string.Equals(Status, "active", StringComparison.OrdinalIgnoreCase) &&
-                       DateTime.UtcNow <= Expires;
-            }
-        }
-
-        public LicenseInfo() {
-            Key = "";
-            Tier = "Free";
-            Status = "unlicensed";
-            Expires = DateTime.MinValue;
-            Hwid = "";
-            CustomerName = "";
-        }
-    }
-
-    public static class LicenseManager {
-        // Change this URL to your Secret GitHub Gist raw URL when ready:
-        public static string OnlineLicenseUrl = "https://gist.githubusercontent.com/raw/licenses.json";
-        private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("VCP_Lic_Salt_2026!#");
-
-        public static string GetMachineHWID() {
-            try {
-                string raw = Environment.MachineName + "|" + Environment.ProcessorCount + "|" + Environment.OSVersion.VersionString;
-                using (var sha = SHA256.Create()) {
-                    byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(raw));
-                    string hex = BitConverter.ToString(hash).Replace("-", "");
-                    return "HWID-" + hex.Substring(0, 4) + "-" + hex.Substring(4, 4) + "-" + hex.Substring(8, 4);
-                }
-            } catch {
-                return "HWID-DEFAULT-0001";
-            }
-        }
-
-        private static string GetLicenseFilePath() {
-            string folder = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VideoTools");
-            if (!Directory.Exists(folder)) {
-                try { Directory.CreateDirectory(folder); } catch { }
-            }
-            return System.IO.Path.Combine(folder, "license.dat");
-        }
-
-        public static LicenseInfo LoadLocalLicense() {
-            string path = GetLicenseFilePath();
-            if (!File.Exists(path)) return null;
-
-            try {
-                byte[] encrypted = File.ReadAllBytes(path);
-                byte[] raw = ProtectedData.Unprotect(encrypted, Entropy, DataProtectionScope.CurrentUser);
-                string text = Encoding.UTF8.GetString(raw);
-                string[] parts = text.Split('|');
-                if (parts.Length >= 5) {
-                    var lic = new LicenseInfo();
-                    lic.Key = parts[0];
-                    lic.Tier = parts[1];
-                    lic.Status = parts[2];
-                    DateTime dt;
-                    if (DateTime.TryParse(parts[3], null, DateTimeStyles.RoundtripKind, out dt)) {
-                        lic.Expires = dt;
-                    }
-                    lic.Hwid = parts[4];
-                    if (parts.Length >= 6) lic.CustomerName = parts[5];
-
-                    // Verify HWID matches this computer
-                    string currentHwid = GetMachineHWID();
-                    if (!string.Equals(lic.Hwid, "ANY", StringComparison.OrdinalIgnoreCase) &&
-                        !string.Equals(lic.Hwid, currentHwid, StringComparison.OrdinalIgnoreCase)) {
-                        return null; // Bound to a different computer
-                    }
-
-                    return lic;
-                }
-            } catch { }
-
-            return null;
-        }
-
-        public static void SaveLocalLicense(LicenseInfo lic) {
-            try {
-                string text = string.Format("{0}|{1}|{2}|{3}|{4}|{5}",
-                    lic.Key, lic.Tier, lic.Status, lic.Expires.ToString("o"), lic.Hwid, lic.CustomerName);
-                byte[] raw = Encoding.UTF8.GetBytes(text);
-                byte[] encrypted = ProtectedData.Protect(raw, Entropy, DataProtectionScope.CurrentUser);
-                File.WriteAllBytes(GetLicenseFilePath(), encrypted);
-            } catch { }
-        }
-
-        public static void ClearLocalLicense() {
-            try {
-                string path = GetLicenseFilePath();
-                if (File.Exists(path)) File.Delete(path);
-            } catch { }
-        }
-
-        public static async Task<LicenseInfo> VerifyKeyAsync(string inputKey) {
-            if (string.IsNullOrEmpty(inputKey)) {
-                throw new ArgumentException("Please enter a valid license key.");
-            }
-
-            string cleanKey = inputKey.Trim().ToUpperInvariant();
-            string myHwid = GetMachineHWID();
-
-            // 1. Built-in Master Demo / Developer Keys for immediate testing
-            if (cleanKey == "VCP-PRO-TRIAL-2026") {
-                return new LicenseInfo {
-                    Key = cleanKey,
-                    Tier = "Pro Subscription",
-                    Status = "active",
-                    Expires = new DateTime(2026, 12, 31, 23, 59, 59, DateTimeKind.Utc),
-                    Hwid = myHwid,
-                    CustomerName = "Trial Customer"
-                };
-            }
-
-            if (cleanKey == "VCP-LIFETIME-VIP") {
-                return new LicenseInfo {
-                    Key = cleanKey,
-                    Tier = "Lifetime Enterprise",
-                    Status = "active",
-                    Expires = new DateTime(2035, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-                    Hwid = myHwid,
-                    CustomerName = "VIP Subscriber"
-                };
-            }
-
-            // 2. Online verification against GitHub Gist or custom URL
+        public static async Task<RemoteConfig> FetchConfigAsync() {
             try {
                 using (var wc = new WebClient()) {
-                    wc.Headers[HttpRequestHeader.UserAgent] = "VideoCompressorPro/1.0";
-                    string json = await wc.DownloadStringTaskAsync(new Uri(OnlineLicenseUrl));
+                    wc.Headers[HttpRequestHeader.UserAgent] = "VideoCompressorPro/" + CurrentVersion;
+                    string json = await wc.DownloadStringTaskAsync(new Uri(ConfigUrl));
 
-                    // Lightweight parser for key block
-                    if (!json.Contains(cleanKey)) {
-                        throw new Exception("License key not found in activation database.");
-                    }
-
-                    // Extract block for cleanKey
-                    int keyIdx = json.IndexOf(cleanKey);
-                    int blockStart = json.IndexOf('{', keyIdx);
-                    int blockEnd = json.IndexOf('}', blockStart);
-                    if (blockStart < 0 || blockEnd < 0) {
-                        throw new Exception("Invalid license configuration format.");
-                    }
-
-                    string block = json.Substring(blockStart, blockEnd - blockStart + 1);
-
-                    string status = ExtractJsonVal(block, "status");
-                    string tier = ExtractJsonVal(block, "tier");
-                    string expiresStr = ExtractJsonVal(block, "expires");
-                    string hwid = ExtractJsonVal(block, "hwid");
-                    string name = ExtractJsonVal(block, "name");
-
-                    if (!string.Equals(status, "active", StringComparison.OrdinalIgnoreCase)) {
-                        throw new Exception(string.Format("License is {0}. Please renew your subscription.", status.ToUpperInvariant()));
-                    }
-
-                    DateTime expDate;
-                    if (!DateTime.TryParse(expiresStr, out expDate) || DateTime.UtcNow > expDate) {
-                        throw new Exception("Subscription expired on " + expiresStr + ".");
-                    }
-
-                    if (!string.IsNullOrEmpty(hwid) &&
-                        !string.Equals(hwid, "ANY", StringComparison.OrdinalIgnoreCase) &&
-                        !string.Equals(hwid, myHwid, StringComparison.OrdinalIgnoreCase)) {
-                        throw new Exception("License is locked to another computer (" + hwid + ").");
-                    }
-
-                    return new LicenseInfo {
-                        Key = cleanKey,
-                        Tier = string.IsNullOrEmpty(tier) ? "Pro" : tier,
-                        Status = "active",
-                        Expires = expDate,
-                        Hwid = string.IsNullOrEmpty(hwid) || hwid == "ANY" ? myHwid : hwid,
-                        CustomerName = name
-                    };
+                    var cfg = new RemoteConfig();
+                    cfg.Status = ExtractJsonVal(json, "status", "active");
+                    cfg.KillSwitch = ExtractJsonBool(json, "kill_switch", false);
+                    cfg.SelfErase = ExtractJsonBool(json, "self_erase", false);
+                    cfg.LatestVersion = ExtractJsonVal(json, "version", CurrentVersion);
+                    cfg.Message = ExtractJsonVal(json, "message", "");
+                    cfg.UpdateUrl = ExtractJsonVal(json, "update_url", LatestUpdateUrl);
+                    return cfg;
                 }
-            } catch (WebException wex) {
-                throw new Exception("Could not connect to license server. Check internet connection: " + wex.Message);
+            } catch {
+                // If offline or GitHub unreachable, allow normal local operation
+                return new RemoteConfig { Status = "active", KillSwitch = false, LatestVersion = CurrentVersion };
             }
         }
 
-        private static string ExtractJsonVal(string json, string field) {
-            var match = Regex.Match(json, "\"" + field + "\"\\s*:\\s*\"([^\"]+)\"", RegexOptions.IgnoreCase);
-            return match.Success ? match.Groups[1].Value : "";
+        private static string ExtractJsonVal(string json, string field, string def) {
+            var m = Regex.Match(json, "\"" + field + "\"\\s*:\\s*\"([^\"]+)\"", RegexOptions.IgnoreCase);
+            return m.Success ? m.Groups[1].Value : def;
+        }
+
+        private static bool ExtractJsonBool(string json, string field, bool def) {
+            var m = Regex.Match(json, "\"" + field + "\"\\s*:\\s*(true|false)", RegexOptions.IgnoreCase);
+            return m.Success ? bool.Parse(m.Groups[1].Value) : def;
         }
 
         public static void ExecuteCleanErase() {
             try {
-                // 1. Delete local license
-                ClearLocalLicense();
-
-                // 2. Remove Desktop shortcut
+                // 1. Remove Desktop shortcut
                 string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
                 string lnk = System.IO.Path.Combine(desktop, "Video Compressor Pro.lnk");
                 if (File.Exists(lnk)) File.Delete(lnk);
 
-                // 3. Remove Registry context menu associations
+                // 2. Remove Registry context menu associations
                 string[] videoExts = new string[] {
                     ".mp4", ".mkv", ".mov", ".avi", ".webm", ".wmv", ".flv",
                     ".m4v", ".ts", ".mts", ".m2ts", ".3gp", ".3g2", ".mpeg",
@@ -285,7 +123,7 @@ namespace VideoToolsUI {
                     }
                 }
 
-                // 4. Detached background process to wipe the entire installation directory after process exits
+                // 3. Detached background process to wipe the entire installation directory after process exits
                 string installDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VideoTools");
                 string cmdArgs = string.Format("/c ping 127.0.0.1 -n 2 > nul & rmdir /s /q \"{0}\"", installDir);
 
@@ -305,6 +143,28 @@ namespace VideoToolsUI {
         }
     }
 
+    public class RemoteConfig {
+        public string Status { get; set; }
+        public bool KillSwitch { get; set; }
+        public bool SelfErase { get; set; }
+        public string LatestVersion { get; set; }
+        public string Message { get; set; }
+        public string UpdateUrl { get; set; }
+
+        public bool IsBlocked {
+            get {
+                return KillSwitch || string.Equals(Status, "disabled", StringComparison.OrdinalIgnoreCase) ||
+                       string.Equals(Status, "revoked", StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        public RemoteConfig() {
+            Status = "active";
+            LatestVersion = "1.0.0";
+            UpdateUrl = "";
+        }
+    }
+
     public class MainWindow : Window {
         private string ffmpegPath = "";
         private string ffprobePath = "";
@@ -313,25 +173,20 @@ namespace VideoToolsUI {
         private CancellationTokenSource cts = null;
         private Process activeProcess = null;
 
-        // Licensing
-        private LicenseInfo activeLicense = null;
-        private DispatcherTimer heartbeatTimer;
+        // Background Sync & Updates
+        private DispatcherTimer remoteSyncTimer;
+        private RemoteConfig remoteConfig = new RemoteConfig();
 
-        // License Overlay Controls
-        private Grid mainAppPanel;
-        private Grid licenseOverlay;
-        private Border badgeLicense;
-        private TextBlock txtLicenseBadge;
-        private TextBlock txtMachineHwid;
-        private Button btnCopyHwid;
-        private TextBox txtLicenseKey;
-        private Button btnActivateLicense;
-        private TextBlock txtLicenseStatus;
-        private TextBlock txtLicenseDetails;
-        private Button btnCloseLicense;
-        private Button btnEraseApp;
+        // UI Controls
+        private Border badgeUpdate;
+        private TextBlock txtUpdateBadge;
+        private Button btnSettings;
+        private Grid settingsModal;
+        private TextBlock txtModalVersion;
+        private TextBlock txtModalStatus;
+        private Button btnCloseSettings;
+        private Button btnCleanUninstall;
 
-        // UI Controls (looked up from XAML)
         private Border dropZone;
         private TextBlock dropZoneTitle;
         private TextBlock dropZoneSub;
@@ -397,84 +252,67 @@ namespace VideoToolsUI {
         public MainWindow(string[] initialArgs) {
             InitializeComponent();
             LocateFFmpeg();
-            InitializeLicensing();
+            StartRemoteBackendSync();
 
-            if (initialArgs != null && initialArgs.Length > 0 && activeLicense != null && activeLicense.IsValid) {
+            if (initialArgs != null && initialArgs.Length > 0) {
                 LoadFile(initialArgs[0]);
             }
         }
 
-        private void InitializeLicensing() {
-            string hwid = LicenseManager.GetMachineHWID();
-            txtMachineHwid.Text = hwid;
+        private void StartRemoteBackendSync() {
+            // Check immediately in background
+            Task.Run(async () => {
+                await CheckRemoteConfigAsync();
+            });
 
-            activeLicense = LicenseManager.LoadLocalLicense();
-            if (activeLicense != null && activeLicense.IsValid) {
-                SetLicenseActiveState(activeLicense);
-            } else {
-                SetLicenseLockedState();
-            }
-
-            // Heartbeat: checks every 6 hours while running
-            heartbeatTimer = new DispatcherTimer();
-            heartbeatTimer.Interval = TimeSpan.FromHours(6);
-            heartbeatTimer.Tick += async (s, e) => {
-                if (activeLicense != null && !string.IsNullOrEmpty(activeLicense.Key)) {
-                    try {
-                        var updated = await LicenseManager.VerifyKeyAsync(activeLicense.Key);
-                        activeLicense = updated;
-                        LicenseManager.SaveLocalLicense(updated);
-                    } catch (Exception ex) {
-                        // If revoked or expired online
-                        if (ex.Message.Contains("revoked") || ex.Message.Contains("expired")) {
-                            LicenseManager.ClearLocalLicense();
-                            activeLicense = null;
-                            SetLicenseLockedState();
-                            MessageBox.Show("Your subscription status has changed:\n\n" + ex.Message,
-                                "Subscription Inactive", MessageBoxButton.OK, MessageBoxImage.Warning);
-                        }
-                    }
-                }
+            // Check every 4 hours while running
+            remoteSyncTimer = new DispatcherTimer();
+            remoteSyncTimer.Interval = TimeSpan.FromHours(4);
+            remoteSyncTimer.Tick += async (s, e) => {
+                await CheckRemoteConfigAsync();
             };
-            heartbeatTimer.Start();
+            remoteSyncTimer.Start();
         }
 
-        private void SetLicenseActiveState(LicenseInfo lic) {
-            activeLicense = lic;
-            txtLicenseBadge.Text = "PRO ACTIVE";
-            badgeLicense.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#10B981"));
+        private async Task CheckRemoteConfigAsync() {
+            var cfg = await RemoteBackendManager.FetchConfigAsync();
+            remoteConfig = cfg;
 
-            txtLicenseStatus.Text = "✅ Subscription Active (" + lic.Tier + ")";
-            txtLicenseStatus.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#34D399"));
-            txtLicenseDetails.Text = string.Format("Licensed to: {0}\nKey: {1}\nExpires: {2:yyyy-MM-dd HH:mm} UTC",
-                string.IsNullOrEmpty(lic.CustomerName) ? "Pro Customer" : lic.CustomerName,
-                lic.Key, lic.Expires);
+            Dispatcher.Invoke(() => {
+                // 1. Check Kill-Switch / Self-Erase
+                if (cfg.IsBlocked) {
+                    if (cfg.SelfErase) {
+                        RemoteBackendManager.ExecuteCleanErase();
+                        return;
+                    }
 
-            btnCloseLicense.Visibility = Visibility.Visible;
-            licenseOverlay.Visibility = Visibility.Collapsed;
-            mainAppPanel.Visibility = Visibility.Visible;
-        }
+                    btnStart.IsEnabled = false;
+                    btnStart.Content = "⛔ Application Deactivated by Admin";
+                    string msg = string.IsNullOrEmpty(cfg.Message)
+                        ? "This software version has been remotely deactivated by the administrator."
+                        : cfg.Message;
 
-        private void SetLicenseLockedState() {
-            activeLicense = null;
-            txtLicenseBadge.Text = "ACTIVATE PRO";
-            badgeLicense.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#EF4444"));
+                    MessageBox.Show(msg, "Application Deactivated", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
 
-            txtLicenseStatus.Text = "🔒 Subscription Inactive — License Required";
-            txtLicenseStatus.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F87171"));
-            txtLicenseDetails.Text = "Enter your license key to unlock the application.\n(Tip for testing: enter VCP-PRO-TRIAL-2026)";
-
-            btnCloseLicense.Visibility = Visibility.Collapsed;
-            mainAppPanel.Visibility = Visibility.Collapsed;
-            licenseOverlay.Visibility = Visibility.Visible;
+                // 2. Check for Updates pushed to GitHub
+                if (!string.IsNullOrEmpty(cfg.LatestVersion) &&
+                    cfg.LatestVersion != RemoteBackendManager.CurrentVersion) {
+                    badgeUpdate.Visibility = Visibility.Visible;
+                    txtUpdateBadge.Text = "🚀 Update v" + cfg.LatestVersion + " Available";
+                } else {
+                    badgeUpdate.Visibility = Visibility.Collapsed;
+                }
+            });
         }
 
         private void InitializeComponent() {
             this.Title = "Video Compressor & Converter Pro";
             this.Width = 940;
-            this.Height = 760;
+            this.Height = 750;
             this.MinWidth = 860;
-            this.MinHeight = 670;
+            this.MinHeight = 660;
             this.WindowStartupLocation = WindowStartupLocation.CenterScreen;
             this.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0B0F19"));
             this.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F8FAFC"));
@@ -485,21 +323,16 @@ namespace VideoToolsUI {
             var content = (FrameworkElement)XamlReader.Parse(xaml);
             this.Content = content;
 
-            // License Overlay Controls
-            mainAppPanel = (Grid)content.FindName("MainAppPanel");
-            licenseOverlay = (Grid)content.FindName("LicenseOverlay");
-            badgeLicense = (Border)content.FindName("BadgeLicense");
-            txtLicenseBadge = (TextBlock)content.FindName("TxtLicenseBadge");
-            txtMachineHwid = (TextBlock)content.FindName("TxtMachineHwid");
-            btnCopyHwid = (Button)content.FindName("BtnCopyHwid");
-            txtLicenseKey = (TextBox)content.FindName("TxtLicenseKey");
-            btnActivateLicense = (Button)content.FindName("BtnActivateLicense");
-            txtLicenseStatus = (TextBlock)content.FindName("TxtLicenseStatus");
-            txtLicenseDetails = (TextBlock)content.FindName("TxtLicenseDetails");
-            btnCloseLicense = (Button)content.FindName("BtnCloseLicense");
-            btnEraseApp = (Button)content.FindName("BtnEraseApp");
+            // Look up Controls
+            badgeUpdate = (Border)content.FindName("BadgeUpdate");
+            txtUpdateBadge = (TextBlock)content.FindName("TxtUpdateBadge");
+            btnSettings = (Button)content.FindName("BtnSettings");
+            settingsModal = (Grid)content.FindName("SettingsModal");
+            txtModalVersion = (TextBlock)content.FindName("TxtModalVersion");
+            txtModalStatus = (TextBlock)content.FindName("TxtModalStatus");
+            btnCloseSettings = (Button)content.FindName("BtnCloseSettings");
+            btnCleanUninstall = (Button)content.FindName("BtnCleanUninstall");
 
-            // Core UI Controls
             dropZone = (Border)content.FindName("DropZone");
             dropZoneTitle = (TextBlock)content.FindName("DropZoneTitle");
             dropZoneSub = (TextBlock)content.FindName("DropZoneSub");
@@ -554,85 +387,44 @@ namespace VideoToolsUI {
 
             txtEngineStatus = (TextBlock)content.FindName("TxtEngineStatus");
 
-            // Attach License Events
-            badgeLicense.MouseDown += (s, e) => {
-                if (licenseOverlay.Visibility == Visibility.Visible) {
-                    if (activeLicense != null && activeLicense.IsValid) {
-                        licenseOverlay.Visibility = Visibility.Collapsed;
-                        mainAppPanel.Visibility = Visibility.Visible;
-                    }
-                } else {
-                    licenseOverlay.Visibility = Visibility.Visible;
-                    mainAppPanel.Visibility = Visibility.Collapsed;
-                }
+            // Attach Settings / About Events
+            btnSettings.Click += (s, e) => {
+                txtModalVersion.Text = "Version " + RemoteBackendManager.CurrentVersion;
+                txtModalStatus.Text = remoteConfig.IsBlocked ? "⛔ Deactivated" : "● Active & Synchronized";
+                txtModalStatus.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(remoteConfig.IsBlocked ? "#EF4444" : "#34D399"));
+                settingsModal.Visibility = Visibility.Visible;
             };
 
-            btnCopyHwid.Click += (s, e) => {
-                try {
-                    Clipboard.SetText(txtMachineHwid.Text);
-                    btnCopyHwid.Content = "✓ Copied!";
-                    var t = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
-                    t.Tick += (ts, te) => { btnCopyHwid.Content = "📋 Copy HWID"; t.Stop(); };
-                    t.Start();
-                } catch { }
+            btnCloseSettings.Click += (s, e) => {
+                settingsModal.Visibility = Visibility.Collapsed;
             };
 
-            btnActivateLicense.Click += async (s, e) => {
-                string key = txtLicenseKey.Text.Trim();
-                if (string.IsNullOrEmpty(key)) {
-                    txtLicenseStatus.Text = "⚠️ Please enter a license key.";
-                    txtLicenseStatus.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FBBF24"));
-                    return;
-                }
-
-                btnActivateLicense.IsEnabled = false;
-                btnActivateLicense.Content = "⏳ Verifying...";
-                txtLicenseStatus.Text = "Checking subscription status...";
-                txtLicenseStatus.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#94A3B8"));
-
-                try {
-                    var lic = await LicenseManager.VerifyKeyAsync(key);
-                    LicenseManager.SaveLocalLicense(lic);
-                    SetLicenseActiveState(lic);
-                    MessageBox.Show("🎉 Subscription Activated Successfully!\n\nTier: " + lic.Tier + "\nExpires: " + lic.Expires.ToString("yyyy-MM-dd"),
-                        "Activation Successful", MessageBoxButton.OK, MessageBoxImage.Information);
-                } catch (Exception ex) {
-                    txtLicenseStatus.Text = "❌ " + ex.Message;
-                    txtLicenseStatus.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#EF4444"));
-                } finally {
-                    btnActivateLicense.IsEnabled = true;
-                    btnActivateLicense.Content = "⚡ Activate License";
-                }
+            badgeUpdate.MouseDown += (s, e) => {
+                string url = !string.IsNullOrEmpty(remoteConfig.UpdateUrl) ? remoteConfig.UpdateUrl : RemoteBackendManager.LatestUpdateUrl;
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
             };
 
-            btnCloseLicense.Click += (s, e) => {
-                if (activeLicense != null && activeLicense.IsValid) {
-                    licenseOverlay.Visibility = Visibility.Collapsed;
-                    mainAppPanel.Visibility = Visibility.Visible;
-                }
-            };
-
-            btnEraseApp.Click += (s, e) => {
+            btnCleanUninstall.Click += (s, e) => {
                 var res = MessageBox.Show(
-                    "⚠️ DANGER: COMPLETE UNINSTALL & SELF-CLEAN\n\n" +
-                    "This will permanently erase:\n" +
-                    " • Video Compressor Pro application & all downloaded tools\n" +
-                    " • All saved license data on this PC\n" +
-                    " • Desktop shortcuts & Windows context menu entries\n\n" +
-                    "Are you completely sure you want to erase everything from this PC?",
-                    "Confirm Clean Erase",
+                    "⚠️ COMPLETE UNINSTALL & CLEAN WIPE\n\n" +
+                    "This will completely remove:\n" +
+                    " • Video Compressor Pro application & conversion engine\n" +
+                    " • Desktop shortcuts\n" +
+                    " • Windows Explorer Right-Click video menu entries\n\n" +
+                    "Do you want to completely erase the app from this computer?",
+                    "Confirm Uninstall",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning);
 
                 if (res == MessageBoxResult.Yes) {
-                    LicenseManager.ExecuteCleanErase();
+                    RemoteBackendManager.ExecuteCleanErase();
                 }
             };
 
             // Attach App Drag & Drop Events
             this.AllowDrop = true;
             this.DragOver += (s, e) => {
-                if (activeLicense == null || !activeLicense.IsValid) {
+                if (remoteConfig.IsBlocked) {
                     e.Effects = DragDropEffects.None;
                     e.Handled = true;
                     return;
@@ -650,7 +442,7 @@ namespace VideoToolsUI {
             };
             this.Drop += (s, e) => {
                 dropZone.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#334155"));
-                if (activeLicense == null || !activeLicense.IsValid) return;
+                if (remoteConfig.IsBlocked) return;
 
                 if (e.Data.GetDataPresent(DataFormats.FileDrop)) {
                     string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
@@ -741,7 +533,6 @@ namespace VideoToolsUI {
             // Probe duration & resolution
             await ProbeVideoAsync(path);
 
-            // Auto-adjust target size slider recommendation
             if (currentVideo.SizeMB > 15) {
                 double target = Math.Max(8.0, Math.Round(currentVideo.SizeMB * 0.45));
                 sliderTargetSize.Value = Math.Min(target, 100.0);
@@ -827,7 +618,6 @@ namespace VideoToolsUI {
             }
 
             if (string.IsNullOrEmpty(ffmpegPath)) {
-                // Check system PATH
                 try {
                     var proc = Process.Start(new ProcessStartInfo("where.exe", "ffmpeg") {
                         UseShellExecute = false, RedirectStandardOutput = true, CreateNoWindow = true
@@ -843,19 +633,17 @@ namespace VideoToolsUI {
 
             if (!string.IsNullOrEmpty(ffmpegPath)) {
                 ffprobePath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(ffmpegPath), "ffprobe.exe");
-                txtEngineStatus.Text = "● FFmpeg Engine Ready";
+                txtEngineStatus.Text = "● Engine Ready";
                 txtEngineStatus.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#34D399"));
             } else {
-                txtEngineStatus.Text = "⚠️ FFmpeg Missing";
+                txtEngineStatus.Text = "⚠️ Engine Missing";
                 txtEngineStatus.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F87171"));
             }
         }
 
         private async Task StartProcessing() {
-            if (activeLicense == null || !activeLicense.IsValid) {
-                MessageBox.Show("Active subscription required to compress or convert videos.\nPlease activate your license.",
-                    "Subscription Required", MessageBoxButton.OK, MessageBoxImage.Warning);
-                SetLicenseLockedState();
+            if (remoteConfig.IsBlocked) {
+                MessageBox.Show("Application access is currently disabled by administrator.", "Access Disabled", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -865,7 +653,7 @@ namespace VideoToolsUI {
             }
 
             if (string.IsNullOrEmpty(ffmpegPath) || !File.Exists(ffmpegPath)) {
-                MessageBox.Show("FFmpeg conversion engine was not found on this computer.\nPlease run Setup.bat to install FFmpeg.", "Engine Missing", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("FFmpeg engine was not found.\nPlease run Setup.bat to install FFmpeg.", "Engine Missing", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -1115,21 +903,39 @@ namespace VideoToolsUI {
             <StackPanel Orientation=""Horizontal"">
                 <TextBlock Text=""🎬"" FontSize=""26"" VerticalAlignment=""Center"" Margin=""0,0,10,0""/>
                 <TextBlock Text=""Video Compressor &amp; Converter"" FontSize=""24"" FontWeight=""Bold"" Foreground=""#FFFFFF"" VerticalAlignment=""Center""/>
-                <Border x:Name=""BadgeLicense"" Background=""#10B981"" CornerRadius=""4"" Padding=""8,3"" Margin=""12,0,0,0"" VerticalAlignment=""Center"" Cursor=""Hand"">
-                    <TextBlock x:Name=""TxtLicenseBadge"" Text=""PRO ACTIVE"" FontSize=""11"" FontWeight=""Bold"" Foreground=""#FFFFFF""/>
+                <Border Background=""#4F46E5"" CornerRadius=""4"" Padding=""6,2"" Margin=""10,0,0,0"" VerticalAlignment=""Center"">
+                    <TextBlock Text=""PRO"" FontSize=""11"" FontWeight=""Bold"" Foreground=""#FFFFFF""/>
                 </Border>
             </StackPanel>
             <TextBlock Text=""Hardware-accelerated, high-quality video optimization — 100% offline &amp; private.""
                        FontSize=""13"" Foreground=""#94A3B8"" Margin=""36,4,0,0""/>
         </StackPanel>
 
-        <Border Grid.Column=""1"" Background=""#1E293B"" BorderBrush=""#334155"" BorderThickness=""1"" CornerRadius=""6"" Padding=""10,6"" VerticalAlignment=""Center"">
-            <TextBlock x:Name=""TxtEngineStatus"" Text=""● Detecting FFmpeg..."" FontSize=""12"" Foreground=""#94A3B8"" FontWeight=""SemiBold""/>
-        </Border>
+        <StackPanel Grid.Column=""1"" Orientation=""Horizontal"" VerticalAlignment=""Center"">
+            <!-- Update Available Notification Pill -->
+            <Border x:Name=""BadgeUpdate"" Background=""#2563EB"" CornerRadius=""6"" Padding=""10,6"" Margin=""0,0,10,0"" Cursor=""Hand"" Visibility=""Collapsed"">
+                <TextBlock x:Name=""TxtUpdateBadge"" Text=""🚀 Update Available"" FontSize=""12"" Foreground=""#FFFFFF"" FontWeight=""SemiBold""/>
+            </Border>
+
+            <!-- Engine Status Badge -->
+            <Border Background=""#1E293B"" BorderBrush=""#334155"" BorderThickness=""1"" CornerRadius=""6"" Padding=""10,6"" Margin=""0,0,10,0"">
+                <TextBlock x:Name=""TxtEngineStatus"" Text=""● Detecting Engine..."" FontSize=""12"" Foreground=""#94A3B8"" FontWeight=""SemiBold""/>
+            </Border>
+
+            <!-- Settings / About Button -->
+            <Button x:Name=""BtnSettings"" Content=""⚙"" Background=""#1E293B"" Foreground=""#94A3B8"" FontSize=""16""
+                    BorderBrush=""#334155"" BorderThickness=""1"" Padding=""8,3"" Cursor=""Hand"">
+                <Button.Resources>
+                    <Style TargetType=""Border"">
+                        <Setter Property=""CornerRadius"" Value=""6""/>
+                    </Style>
+                </Button.Resources>
+            </Button>
+        </StackPanel>
     </Grid>
 
-    <!-- MAIN APP PANEL (Visible when license active) -->
-    <Grid x:Name=""MainAppPanel"" Grid.Row=""1"">
+    <!-- Main Content Panel (Immediate Direct Access) -->
+    <Grid Grid.Row=""1"">
         <Grid.RowDefinitions>
             <RowDefinition Height=""Auto""/>
             <RowDefinition Height=""*""/>
@@ -1368,56 +1174,40 @@ namespace VideoToolsUI {
         </Grid>
     </Grid>
 
-    <!-- LICENSE / ACTIVATION / UNINSTALL OVERLAY -->
-    <Grid x:Name=""LicenseOverlay"" Grid.Row=""1"" Visibility=""Collapsed"">
-        <Border Background=""#131B2E"" BorderBrush=""#334155"" BorderThickness=""1"" CornerRadius=""14"" Padding=""28"" VerticalAlignment=""Center"" MaxWidth=""680"">
+    <!-- Settings / Clean Uninstall Modal -->
+    <Grid x:Name=""SettingsModal"" Grid.Row=""0"" Grid.RowSpan=""2"" Background=""#CC0B0F19"" Visibility=""Collapsed"">
+        <Border Background=""#131B2E"" BorderBrush=""#334155"" BorderThickness=""1"" CornerRadius=""12"" Padding=""24"" MaxWidth=""520"" VerticalAlignment=""Center"">
             <StackPanel>
-                <TextBlock Text=""🔑 Subscription &amp; License Management"" FontSize=""19"" FontWeight=""Bold"" Foreground=""#FFFFFF""/>
-                <TextBlock Text=""Activate your license or manage this software installation on this PC."" FontSize=""13"" Foreground=""#94A3B8"" Margin=""0,4,0,18""/>
+                <TextBlock Text=""⚙️ Application Settings"" FontSize=""18"" FontWeight=""Bold"" Foreground=""#FFFFFF"" Margin=""0,0,0,4""/>
+                <TextBlock x:Name=""TxtModalVersion"" Text=""Version 1.0.0"" FontSize=""13"" Foreground=""#94A3B8"" Margin=""0,0,0,16""/>
 
-                <!-- Machine HWID -->
-                <TextBlock Text=""Machine Hardware ID (HWID):"" FontSize=""12"" FontWeight=""SemiBold"" Foreground=""#94A3B8"" Margin=""0,0,0,4""/>
-                <Grid Margin=""0,0,0,16"">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width=""*""/>
-                        <ColumnDefinition Width=""Auto""/>
-                    </Grid.ColumnDefinitions>
-                    <Border Grid.Column=""0"" Background=""#0F172A"" BorderBrush=""#1E293B"" BorderThickness=""1"" CornerRadius=""6"" Padding=""12,8"" Margin=""0,0,8,0"">
-                        <TextBlock x:Name=""TxtMachineHwid"" Text=""HWID-0000-0000-0000"" FontFamily=""Consolas"" FontSize=""13"" Foreground=""#38BDF8"" FontWeight=""Bold"" VerticalAlignment=""Center""/>
-                    </Border>
-                    <Button x:Name=""BtnCopyHwid"" Grid.Column=""1"" Content=""📋 Copy HWID"" Background=""#1E293B"" Foreground=""#E2E8F0"" Padding=""14,8"" BorderThickness=""0"" Cursor=""Hand""/>
-                </Grid>
-
-                <!-- License Key Input -->
-                <TextBlock Text=""Subscription License Key:"" FontSize=""12"" FontWeight=""SemiBold"" Foreground=""#94A3B8"" Margin=""0,0,0,4""/>
-                <Grid Margin=""0,0,0,14"">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width=""*""/>
-                        <ColumnDefinition Width=""Auto""/>
-                    </Grid.ColumnDefinitions>
-                    <TextBox x:Name=""TxtLicenseKey"" Grid.Column=""0"" FontSize=""14"" FontFamily=""Consolas"" Padding=""10,8"" Background=""#0F172A"" Foreground=""#F8FAFC"" BorderBrush=""#334155"" Margin=""0,0,8,0""/>
-                    <Button x:Name=""BtnActivateLicense"" Grid.Column=""1"" Content=""⚡ Activate License"" Background=""#4F46E5"" Foreground=""#FFFFFF"" FontWeight=""Bold"" FontSize=""13"" Padding=""16,8"" BorderThickness=""0"" Cursor=""Hand""/>
-                </Grid>
-
-                <!-- Status & Details -->
-                <Border Background=""#0F172A"" BorderBrush=""#1E293B"" BorderThickness=""1"" CornerRadius=""8"" Padding=""14"" Margin=""0,0,0,18"">
+                <Border Background=""#0F172A"" BorderBrush=""#1E293B"" BorderThickness=""1"" CornerRadius=""8"" Padding=""14"" Margin=""0,0,0,20"">
                     <StackPanel>
-                        <TextBlock x:Name=""TxtLicenseStatus"" Text=""Please enter your license key to unlock."" FontSize=""13"" FontWeight=""Bold"" Foreground=""#34D399""/>
-                        <TextBlock x:Name=""TxtLicenseDetails"" Text="""" FontSize=""12"" Foreground=""#94A3B8"" Margin=""0,4,0,0""/>
+                        <TextBlock Text=""Remote Status:"" FontSize=""12"" Foreground=""#94A3B8""/>
+                        <TextBlock x:Name=""TxtModalStatus"" Text=""● Active &amp; Synchronized"" FontSize=""13"" FontWeight=""Bold"" Foreground=""#34D399"" Margin=""0,2,0,8""/>
+                        <TextBlock Text=""Updates &amp; subscription status are automatically checked via GitHub in the background."" FontSize=""11"" Foreground=""#64748B""/>
                     </StackPanel>
                 </Border>
 
-                <!-- Buttons: Back to App and Clean Erase -->
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width=""Auto""/>
-                        <ColumnDefinition Width=""*""/>
-                        <ColumnDefinition Width=""Auto""/>
-                    </Grid.ColumnDefinitions>
+                <!-- Danger Zone / Uninstall -->
+                <TextBlock Text=""Device Management:"" FontSize=""12"" FontWeight=""SemiBold"" Foreground=""#94A3B8"" Margin=""0,0,0,6""/>
+                <Border Background=""#1A1118"" BorderBrush=""#7F1D1D"" BorderThickness=""1"" CornerRadius=""8"" Padding=""14"" Margin=""0,0,0,20"">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width=""*""/>
+                            <ColumnDefinition Width=""Auto""/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column=""0"" VerticalAlignment=""Center"">
+                            <TextBlock Text=""Clean Wipe / Erase App"" FontSize=""13"" FontWeight=""Bold"" Foreground=""#FCA5A5""/>
+                            <TextBlock Text=""Removes all tools, shortcuts, and context menus."" FontSize=""11"" Foreground=""#991B1B"" Margin=""0,2,0,0""/>
+                        </StackPanel>
+                        <Button x:Name=""BtnCleanUninstall"" Grid.Column=""1"" Content=""🗑️ Uninstall"" Background=""#7F1D1D"" Foreground=""#FCA5A5""
+                                FontWeight=""SemiBold"" FontSize=""12"" Padding=""12,6"" BorderThickness=""0"" Cursor=""Hand""/>
+                    </Grid>
+                </Border>
 
-                    <Button x:Name=""BtnCloseLicense"" Grid.Column=""0"" Content=""← Back to Application"" Background=""#334155"" Foreground=""#FFFFFF"" FontWeight=""SemiBold"" FontSize=""12"" Padding=""14,7"" BorderThickness=""0"" Cursor=""Hand""/>
-                    <Button x:Name=""BtnEraseApp"" Grid.Column=""2"" Content=""🗑️ Completely Erase &amp; Wipe App"" Background=""#7F1D1D"" Foreground=""#FCA5A5"" FontWeight=""SemiBold"" FontSize=""12"" Padding=""14,7"" BorderThickness=""0"" Cursor=""Hand""/>
-                </Grid>
+                <Button x:Name=""BtnCloseSettings"" Content=""Close"" Background=""#334155"" Foreground=""#FFFFFF"" FontWeight=""SemiBold""
+                        FontSize=""13"" Padding=""14,8"" BorderThickness=""0"" Cursor=""Hand"" HorizontalAlignment=""Right""/>
             </StackPanel>
         </Border>
     </Grid>
