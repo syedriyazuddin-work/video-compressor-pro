@@ -1,0 +1,21 @@
+# FFmpeg binaries (~210MB total, exceeds GitHub's 100MB per-file limit)
+# The installer and scripts download FFmpeg automatically.
+bin/ffmpeg.exe
+bin/ffprobe.exe
+bin/
+
+# Archives & temporary installers
+*.zip
+*.7z
+*.tar.gz
+
+# Runtime logs
+*.log
+crash.log
+lifecycle.log
+
+# IDE & OS files
+.vs/
+.vscode/
+Thumbs.db
+Desktop.ini
