@@ -390,7 +390,7 @@ namespace VideoToolsUI {
             // Attach Settings / About Events
             btnSettings.Click += (s, e) => {
                 txtModalVersion.Text = "Version " + RemoteBackendManager.CurrentVersion;
-                txtModalStatus.Text = remoteConfig.IsBlocked ? "⛔ Deactivated" : "● Active & Synchronized";
+                txtModalStatus.Text = remoteConfig.IsBlocked ? "● Service Unavailable" : "● Operational";
                 txtModalStatus.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(remoteConfig.IsBlocked ? "#EF4444" : "#34D399"));
                 settingsModal.Visibility = Visibility.Visible;
             };
@@ -1176,16 +1176,15 @@ namespace VideoToolsUI {
 
     <!-- Settings / Clean Uninstall Modal -->
     <Grid x:Name=""SettingsModal"" Grid.Row=""0"" Grid.RowSpan=""2"" Background=""#CC0B0F19"" Visibility=""Collapsed"">
-        <Border Background=""#131B2E"" BorderBrush=""#334155"" BorderThickness=""1"" CornerRadius=""12"" Padding=""24"" MaxWidth=""520"" VerticalAlignment=""Center"">
+        <Border Background=""#131B2E"" BorderBrush=""#334155"" BorderThickness=""1"" CornerRadius=""12"" Padding=""24"" MaxWidth=""480"" VerticalAlignment=""Center"">
             <StackPanel>
-                <TextBlock Text=""⚙️ Application Settings"" FontSize=""18"" FontWeight=""Bold"" Foreground=""#FFFFFF"" Margin=""0,0,0,4""/>
+                <TextBlock Text=""Video Compressor Pro"" FontSize=""18"" FontWeight=""Bold"" Foreground=""#FFFFFF"" Margin=""0,0,0,4""/>
                 <TextBlock x:Name=""TxtModalVersion"" Text=""Version 1.0.0"" FontSize=""13"" Foreground=""#94A3B8"" Margin=""0,0,0,16""/>
 
                 <Border Background=""#0F172A"" BorderBrush=""#1E293B"" BorderThickness=""1"" CornerRadius=""8"" Padding=""14"" Margin=""0,0,0,20"">
                     <StackPanel>
-                        <TextBlock Text=""Remote Status:"" FontSize=""12"" Foreground=""#94A3B8""/>
-                        <TextBlock x:Name=""TxtModalStatus"" Text=""● Active &amp; Synchronized"" FontSize=""13"" FontWeight=""Bold"" Foreground=""#34D399"" Margin=""0,2,0,8""/>
-                        <TextBlock Text=""Updates &amp; subscription status are automatically checked via GitHub in the background."" FontSize=""11"" Foreground=""#64748B""/>
+                        <TextBlock Text=""System Status:"" FontSize=""12"" Foreground=""#94A3B8""/>
+                        <TextBlock x:Name=""TxtModalStatus"" Text=""● Operational"" FontSize=""13"" FontWeight=""Bold"" Foreground=""#34D399"" Margin=""0,2,0,0""/>
                     </StackPanel>
                 </Border>
 
